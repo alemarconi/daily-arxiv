@@ -26,9 +26,23 @@ jobs:
           USERNAME: ${{ github.event.inputs.username }}
           EMBEDS: ${{ github.event.inputs.embeds_json }}
         run: |
-          jq -n --arg c "$CONTENT" --arg u "$USERNAME" --argjson e "$EMBEDS" \
-            '{content:$c, username:$u} + ( ($e|length)>0 ? {embeds:$e} : {} )' \
-            > payload.json
+          # Normalizza EMBEDS: se non è JSON valido o è vuoto, metti []
+          echo "$EMBEDS" > embeds_in.txt
+          if ! jq -e . embeds_in.txt >/dev/null 2>&1; then
+            echo "[]" > embeds.json
+          else
+            cat embeds_in.txt > embeds.json
+          fi
+
+          # Crea il payload in modo sicuro con jq (niente problemi di quoting)
+          jq -n --arg c "$CONTENT" --arg u "$USERNAME" --slurpfile e embeds.json '
+            {content:$c}
+            + ( ($u|length)>0 ? {username:$u} : {} )
+            + ( ( ($e[0]|type)=="array" and ($e[0]|length)>0 ) ? {embeds:$e[0]} : {} )
+          ' > payload.json
+
+          echo "Payload che invio:"
+          cat payload.json
 
           curl -X POST -H "Content-Type: application/json" \
             -d @payload.json "$WEBHOOK_URL"
