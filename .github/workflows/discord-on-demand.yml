@@ -25,6 +25,7 @@ jobs:
           CONTENT: ${{ github.event.inputs.content }}
           USERNAME: ${{ github.event.inputs.username }}
           EMBEDS: ${{ github.event.inputs.embeds_json }}
+        shell: bash
         run: |
           python - <<'PY' > payload.json
 import os, json
