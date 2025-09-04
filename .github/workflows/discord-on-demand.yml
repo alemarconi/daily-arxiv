@@ -1,0 +1,34 @@
+name: Discord on-demand (GitHub-only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      content:
+        description: "Testo del messaggio da inviare a Discord"
+        required: true
+      username:
+        description: "Nome visualizzato (opzionale)"
+        required: false
+        default: ""
+      embeds_json:
+        description: "JSON per embeds (opzionale)"
+        required: false
+        default: "[]"
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post to Discord (on-demand)
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          CONTENT: ${{ github.event.inputs.content }}
+          USERNAME: ${{ github.event.inputs.username }}
+          EMBEDS: ${{ github.event.inputs.embeds_json }}
+        run: |
+          jq -n --arg c "$CONTENT" --arg u "$USERNAME" --argjson e "$EMBEDS" \
+            '{content:$c, username:$u} + ( ($e|length)>0 ? {embeds:$e} : {} )' \
+            > payload.json
+
+          curl -X POST -H "Content-Type: application/json" \
+            -d @payload.json "$WEBHOOK_URL"
