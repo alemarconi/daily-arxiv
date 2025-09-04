@@ -26,20 +26,27 @@ jobs:
           USERNAME: ${{ github.event.inputs.username }}
           EMBEDS: ${{ github.event.inputs.embeds_json }}
         run: |
-          # Normalizza EMBEDS: se non è JSON valido o è vuoto, metti []
-          echo "$EMBEDS" > embeds_in.txt
-          if ! jq -e . embeds_in.txt >/dev/null 2>&1; then
-            echo "[]" > embeds.json
-          else
-            cat embeds_in.txt > embeds.json
-          fi
+          python - <<'PY' > payload.json
+import os, json
 
-          # Crea il payload in modo sicuro con jq (niente problemi di quoting)
-          jq -n --arg c "$CONTENT" --arg u "$USERNAME" --slurpfile e embeds.json '
-            {content:$c}
-            + ( ($u|length)>0 ? {username:$u} : {} )
-            + ( ( ($e[0]|type)=="array" and ($e[0]|length)>0 ) ? {embeds:$e[0]} : {} )
-          ' > payload.json
+content  = os.environ.get("CONTENT", "")
+username = os.environ.get("USERNAME", "")
+embeds_s = os.environ.get("EMBEDS", "[]")
+
+# Prova a leggere gli embeds; se non è JSON valido -> []
+try:
+    embeds = json.loads(embeds_s)
+except Exception:
+    embeds = []
+
+payload = {"content": content}
+if isinstance(username, str) and len(username) > 0:
+    payload["username"] = username
+if isinstance(embeds, list) and len(embeds) > 0:
+    payload["embeds"] = embeds
+
+print(json.dumps(payload))
+PY
 
           echo "Payload che invio:"
           cat payload.json
