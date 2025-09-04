@@ -25,29 +25,29 @@ jobs:
           CONTENT: ${{ github.event.inputs.content }}
           USERNAME: ${{ github.event.inputs.username }}
           EMBEDS: ${{ github.event.inputs.embeds_json }}
-        shell: bash
         run: |
-          python - <<'PY' > payload.json
-import os, json
+          cat > payload.py <<'PY'
+          import os, json
 
-content  = os.environ.get("CONTENT", "")
-username = os.environ.get("USERNAME", "")
-embeds_s = os.environ.get("EMBEDS", "[]")
+          content  = os.environ.get("CONTENT", "")
+          username = os.environ.get("USERNAME", "")
+          embeds_s = os.environ.get("EMBEDS", "[]")
 
-# Prova a leggere gli embeds; se non è JSON valido -> []
-try:
-    embeds = json.loads(embeds_s)
-except Exception:
-    embeds = []
+          try:
+              embeds = json.loads(embeds_s)
+          except Exception:
+              embeds = []
 
-payload = {"content": content}
-if isinstance(username, str) and len(username) > 0:
-    payload["username"] = username
-if isinstance(embeds, list) and len(embeds) > 0:
-    payload["embeds"] = embeds
+          payload = {"content": content}
+          if isinstance(username, str) and len(username) > 0:
+              payload["username"] = username
+          if isinstance(embeds, list) and len(embeds) > 0:
+              payload["embeds"] = embeds
 
-print(json.dumps(payload))
-PY
+          print(json.dumps(payload))
+          PY
+
+          python payload.py > payload.json
 
           echo "Payload che invio:"
           cat payload.json
